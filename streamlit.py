@@ -9,7 +9,11 @@ st.set_page_config(layout="wide")
 st.title('Vivino Market Analysis')
 # Database connection
 engine = create_engine('sqlite:///vivino.db')
-col1, col2, col3 = st.columns([2,7,2])
+col1, col2, col3 = st.columns([1,6,2])
+csv_file_path = 'wine_data_missing_data.csv'
+csv_data = pd.read_csv(csv_file_path)
+csv_data.to_sql('temp', engine, if_exists='replace', index=False, method='multi')
+
 def get_image_base64_from_url(url):
     response = requests.get(url)
     # Make sure the request was successful
@@ -38,15 +42,6 @@ add_bg_from_base64(image_base64)
 with col1:
     st.text('')
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
 with col2:
 
     def page_one():
@@ -55,14 +50,15 @@ with col2:
 use this phenomenon to your advantage by selecting the top wines to boost sales!''')
         limit = st.number_input("Number of wines to highlight", min_value=1, value=10)
         query = f"""
-        SELECT * 
+        SELECT wines.id, wines.name, t.wynnery AS winery_name, wines.ratings_average, wines.ratings_count, wines.is_natural 
         FROM wines
+        JOIN temp t ON wines.id = t.wine_id
         ORDER BY ratings_average DESC, ratings_count DESC
         LIMIT {limit}
         """
         df = pd.read_sql_query(query, engine)
         df.set_index('id', inplace=True)
-        df = df[['name', 'ratings_average', 'ratings_count','is_natural']]
+        df = df[['name','winery_name', 'ratings_average', 'ratings_count','is_natural']]
         st.dataframe(df)
 
         if st.button('Next'):
@@ -155,15 +151,16 @@ padding: 10px;
         col1, col2, col3 = st.columns([9, 2, 9])
         with col1:
             st.header('Award the overall best wineries!')
-            st.text('''The wineries with the highest total rank 
-(Sum of all their ranks in previous awards) 
-are the best wineries. Award them to increase 
-their reputation and sales!''')
+            st.text('''The wineries with the most awards and lowest 
+total rank (Sum of all their ranks in 
+previous awards) are the best wineries. Award 
+them to increase their reputation and sales!''')
             limit = st.number_input("Number of wineries to award", min_value=1, value=3)
             query = f"""
                         SELECT
                         wynnery as winery_name,
                         SUM(rank) as total_rank,
+                        COUNT(rank) as number_of_awards,
                         wines.winery_id
 
                         FROM vintage_toplists_rankings
@@ -171,7 +168,7 @@ their reputation and sales!''')
                         JOIN vintages on vintage_id = vintages.id
                         JOIN wines on vintages.wine_id = wines.id
                         GROUP BY wynnery
-                        ORDER BY total_rank DESC
+                        ORDER BY number_of_awards DESC, total_rank ASC 
                         LIMIT {limit}
                         """
             df = pd.read_sql_query(query, engine)
@@ -181,17 +178,18 @@ their reputation and sales!''')
             st.write("")
         with col3:
             st.header('Award the most promising wineries!')
-            st.text('''Promising wineries are the ones with 
-the highest rank difference (Current 
-rank - Previous rank). Award them to 
-increase their awareness and boost 
-their drive to excel!''')
+            st.text('''Promising wineries have the highest rank 
+difference (Current rank - Previous rank). 
+Award them to increase their awareness and 
+boost their drive to excel!''')
             limit1 = st.number_input("Number of up and coming wineries to award", min_value=1, value=3)
 
             query1 = f"""
                         SELECT
                         wynnery as winery_name,
-                        rank - previous_rank AS rank_difference,
+                        previous_rank - rank AS rank_difference,
+                        rank,
+                        previous_rank,
                         wines.winery_id
                         FROM vintage_toplists_rankings
                         JOIN temp ON vintage_toplists_rankings.vintage_id = temp.id_vintage_id
@@ -344,10 +342,7 @@ each grape are the best wines. Use this
 information to target the best wines 
 for your marketing campaigns.''')
             limit1 = st.number_input("Number of wines", min_value=1, value=5, key='wines_limit')
-            csv_file_path = 'wine_data_missing_data.csv'
-            csv_data = pd.read_csv(csv_file_path)
-            csv_data.to_sql('temp', engine, if_exists='replace', index=False, method='multi')
-
+            
             if not df.empty:
                 grapes = df['grape_name'].tolist()
                 for grape in grapes:
