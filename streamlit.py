@@ -349,7 +349,7 @@ for your marketing campaigns.''')
                     st.subheader(f"Top {limit1} wines for {grape}")
                     query1 = f"""
                     SELECT
-                    wine.name AS wine_name,
+                    DISTINCT(wine.name) AS wine_name,
                     wine.ratings_average,
                     wine.id,
                     t.grappe as grape_name
@@ -406,23 +406,41 @@ that country.''')
         query = """
         SELECT
         c.name AS country_name,
-        AVG(w.ratings_average) AS avg_rating
+        AVG(w.ratings_average) AS avg_rating,
+        c.wines_count AS wines_count
         FROM countries c
         JOIN regions r ON c.code = r.country_code
         JOIN wines w ON r.id = w.region_id
         GROUP BY c.name
-        ORDER BY avg_rating DESC;
+        ORDER BY avg_rating DESC, c.wines_count;
         """
 
         df = pd.read_sql_query(query, engine)
 
-        fig = plt.figure(figsize=(10, 6))
-        plt.bar(df['country_name'], df['avg_rating'], color='magenta')
-        plt.ylim(4., 4.6)
-        plt.xlabel('Country Name')
-        plt.ylabel('Average Wine Rating')
-        plt.title('Average Wine Rating by Country')
-        plt.xticks(rotation=45, ha='right')
+        wines_count_normalized = (df['wines_count'] - df['wines_count'].min()) / (df['wines_count'].max() - df['wines_count'].min())
+
+# Choose a colormap
+        cmap = plt.cm.plasma
+
+        # Map normalized wine counts to colors
+        colors = cmap(wines_count_normalized)
+
+        # Plot
+        fig, ax = plt.subplots(figsize=(10, 6))
+        bars = ax.bar(df['country_name'], df['avg_rating'], color=colors)
+        ax.set_ylim(4., 4.6)
+        ax.set_xlabel('Country Name')
+        ax.set_ylabel('Average Wine Rating')
+        ax.set_title('Average Wine Rating by Country')
+        ax.set_xticklabels(df['country_name'], rotation=45, ha='right')
+
+
+        # Optional: Create a colorbar
+        sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=df['wines_count'].min(), vmax=df['wines_count'].max()))
+        sm.set_array([])
+        cbar = plt.colorbar(sm, ax=ax)
+        cbar.set_label('Wine Count')
+
         plt.tight_layout()
         st.pyplot(fig)
 
@@ -432,7 +450,8 @@ vintage wines produced in that country.''')
         query1 = """
         SELECT
         c.name AS country_name,
-        AVG(v.ratings_average) AS avg_rating
+        AVG(v.ratings_average) AS avg_rating,
+        c.wines_count
         FROM countries c
         JOIN regions r ON c.code = r.country_code
         JOIN wines w ON r.id = w.region_id
@@ -443,14 +462,30 @@ vintage wines produced in that country.''')
 
         df1 = pd.read_sql_query(query1, engine)
 
-        # Step 3: Plot the results using Matplotlib
-        fig1 = plt.figure(figsize=(10, 6))
-        plt.bar(df1['country_name'], df1['avg_rating'], color='magenta')
-        plt.xlabel('Country Name')
-        plt.ylabel('Average Wine Rating')
-        plt.title('Average Wine Rating by Country')
-        plt.xticks(rotation=45, ha='right')  # Rotate country names for better readability
-        plt.tight_layout()  # Adjust layout to fit country names
+        wines_count_normalized1 = (df1['wines_count'] - df1['wines_count'].min()) / (df1['wines_count'].max() - df1['wines_count'].min())
+
+# Choose a colormap
+        cmap = plt.cm.plasma
+
+        # Map normalized wine counts to colors
+        colors1 = cmap(wines_count_normalized1)
+
+        # Plot
+        fig1, ax = plt.subplots(figsize=(10, 6))
+        bars = ax.bar(df1['country_name'], df1['avg_rating'], color=colors1)
+        ax.set_xlabel('Country Name')
+        ax.set_ylabel('Average Wine Rating')
+        ax.set_title('Average Wine Rating by Country')
+        ax.set_xticklabels(df1['country_name'], rotation=45, ha='right')
+
+
+        # Optional: Create a colorbar
+        sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=df1['wines_count'].min(), vmax=df1['wines_count'].max()))
+        sm.set_array([])
+        cbar = plt.colorbar(sm, ax=ax)
+        cbar.set_label('Wine Count')
+
+        plt.tight_layout()
         st.pyplot(fig1)
         if st.button('Previous'):
             st.session_state.page = 'page_five'
