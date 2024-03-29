@@ -39,7 +39,7 @@ To run locally:
 ```bash
 python streamlit run streamlit.py
 ```
-To deploy online simply link the repository from GitHub on the [Streamlit Community Cloud](https://streamlit.io/cloud) and deploy!
+To deploy online simply fork the repository on GitHub, then link your repo on the [Streamlit Community Cloud](https://streamlit.io/cloud) and deploy!
 
 ##  📁Project Structure
 - queries.sql: Contains the main queries used for navigating the database.
