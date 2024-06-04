@@ -3,3 +3,5 @@ sqlalchemy == 2.0.29
 pandas == 2.2.1
 requests == 2.31.0
 streamlit == 1.32.2
+beautifulsoup4 == 4.12.3
+bs4 == 0.0.2
